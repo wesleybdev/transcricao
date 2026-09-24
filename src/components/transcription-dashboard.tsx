@@ -726,13 +726,12 @@ export function TranscriptionDashboard() {
         {activeTab === "transcriber" ? (
         <section className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[390px_minmax(0,1fr)]">
           <aside className="flex min-h-0 flex-col gap-4">
-            <button
+            <label
               className={`group flex min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center shadow-[0_18px_70px_rgba(0,0,0,0.18)] transition duration-200 ease-out ${
                 isDragging
                   ? "border-teal-300 bg-teal-300/12 shadow-[0_20px_90px_rgba(45,212,191,0.12)]"
                   : "border-white/15 bg-white/[0.045] hover:border-teal-300/50 hover:bg-white/[0.065]"
               } cursor-pointer`}
-              onClick={() => fileInputRef.current?.click()}
               onDragOver={(event) => {
                 event.preventDefault();
                 setIsDragging(true);
@@ -743,7 +742,7 @@ export function TranscriptionDashboard() {
                 setIsDragging(false);
                 handleFiles(event.dataTransfer.files);
               }}
-              type="button"
+              htmlFor="transcription-file-upload"
             >
               <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-200 transition duration-200 ease-out group-hover:scale-105">
                 <CloudUpload className="h-8 w-8" />
@@ -762,14 +761,15 @@ export function TranscriptionDashboard() {
               </p>
 
               <input
+                id="transcription-file-upload"
                 ref={fileInputRef}
-                className="hidden"
+                className="sr-only"
                 type="file"
                 multiple
                 accept={ACCEPTED_EXTENSIONS}
                 onChange={(event) => handleFiles(event.target.files)}
               />
-            </button>
+            </label>
 
             {message ? (
               <div className="flex gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">
