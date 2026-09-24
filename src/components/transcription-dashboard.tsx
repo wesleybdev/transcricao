@@ -35,6 +35,11 @@ import {
   type SceneSet
 } from "@/lib/scenes";
 import type { Paragraph, TranscriptData } from "@/lib/types";
+import {
+  ACCEPTED_MEDIA_TYPES,
+  buildSelectedFilesMessage,
+  getUploadLimitError
+} from "@/lib/uploads";
 
 type SessionStatus = "queued" | "uploading" | "processing" | "completed" | "error";
 type ViewMode = "text" | "paragraphs" | "speakers" | "timestamps";
@@ -54,8 +59,6 @@ type SessionItem = {
 };
 
 const STORAGE_KEY = "transcription-sessions-v1";
-const ACCEPTED_EXTENSIONS = ".mp4,.mov,.webm,.mp3,.wav,.m4a,.ogg,.flac";
-const LARGE_FILE_BYTES = 200 * 1024 * 1024;
 const MAX_CONCURRENT_TRANSCRIPTIONS = 3;
 
 const MODES: Array<{ id: ViewMode; label: string }> = [
@@ -265,12 +268,13 @@ export function TranscriptionDashboard() {
     });
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
       const response = await fetch("/api/transcrever", {
         method: "POST",
-        body: formData
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          "X-File-Name": encodeURIComponent(file.name)
+        },
+        body: file
       });
       const payload = await response.json();
 
@@ -462,23 +466,24 @@ export function TranscriptionDashboard() {
     const createdAt = Date.now();
     const nextSessions = selectedFiles.map((file, index) => {
       const id = crypto.randomUUID();
-      filesRef.current.set(id, file);
+      const limitError = getUploadLimitError(file);
+
+      if (!limitError) {
+        filesRef.current.set(id, file);
+      }
 
       return {
         id,
         fileName: file.name,
         fileSize: file.size,
-        status: "queued" as const,
-        createdAt: createdAt + index
+        status: limitError ? "error" as const : "queued" as const,
+        createdAt: createdAt + index,
+        error: limitError
       };
     });
 
     setSelectedFilesCount(selectedFiles.length);
-    setMessage(
-      selectedFiles.some((file) => file.size > LARGE_FILE_BYTES)
-        ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "arquivo selecionado" : "arquivos selecionados"}. Há arquivo acima de 200MB; o envio pode demorar bastante.`
-        : `${selectedFiles.length} ${selectedFiles.length === 1 ? "arquivo selecionado" : "arquivos selecionados"}.`
-    );
+    setMessage(buildSelectedFilesMessage(selectedFiles));
     setSessions((current) => [...nextSessions, ...current]);
     setSelectedId(nextSessions[0]?.id);
 
@@ -766,7 +771,7 @@ export function TranscriptionDashboard() {
                 className="sr-only"
                 type="file"
                 multiple
-                accept={ACCEPTED_EXTENSIONS}
+                accept={ACCEPTED_MEDIA_TYPES}
                 onChange={(event) => handleFiles(event.target.files)}
               />
             </label>

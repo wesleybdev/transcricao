@@ -2,6 +2,10 @@ import type { ParagraphsResponse, TranscriptData } from "@/lib/types";
 
 const BASE_URL = "https://api.assemblyai.com/v2";
 
+type AssemblyFetchInit = RequestInit & {
+  duplex?: "half";
+};
+
 function getApiKey() {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
 
@@ -12,7 +16,7 @@ function getApiKey() {
   return apiKey;
 }
 
-async function assemblyFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function assemblyFetch<T>(path: string, init: AssemblyFetchInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {
@@ -29,10 +33,14 @@ async function assemblyFetch<T>(path: string, init: RequestInit = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
-export async function uploadMedia(buffer: ArrayBuffer) {
+export async function uploadMedia(body: BodyInit, contentType = "application/octet-stream") {
   const response = await assemblyFetch<{ upload_url: string }>("/upload", {
     method: "POST",
-    body: buffer
+    headers: {
+      "Content-Type": contentType
+    },
+    body,
+    duplex: body instanceof ReadableStream ? "half" : undefined
   });
 
   return response.upload_url;
